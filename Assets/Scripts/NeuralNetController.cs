@@ -46,24 +46,38 @@ public class NeuralNetController : MonoBehaviour
     public Transform spawnPointsOutputs;
     public TextMeshProUGUI cost;
 
-
+    [Header("Neural Net Data")]
     private hiddenLayer[] allMyHiddenLayers;
+
+    [Range(1, 500)]
+    public int dataTrainSize;
+    [Range(1, 100)]
+    public int dataTestSize;
+
     [SerializeField]
-    private float speedAnim;
+    public data[] dataTrain;
     [SerializeField]
+    public data[] dataTest;
+
     public NeuralNet myNet;
-    data myData;
+    private int dataIndex = 0;
+    private int dataTestIndex = 0;
+
+    [SerializeField]
+    float speedAnim;
+    [SerializeField]
+
     void Start()
     {
 
 
         CreateNetUI(ref numInputs,ref numHiddenLayers,ref numHiddenLayerSize,ref numOutputs);
         CreateBackendNet();
-
         lastNumInputs = numInputs;
         lastNumHiddenLayers = numHiddenLayers;
         lastNumHiddenLayerSize = numHiddenLayerSize;
         lastNumOutputs = numOutputs;
+
 }
 
     void Update()
@@ -74,21 +88,55 @@ public class NeuralNetController : MonoBehaviour
         }
         if (trainNet)
         {
-            myNet.Train(myData);
-            cost.text = myNet.CostCalculation(myData).ToString();
+
+            myNet.Train(dataTrain[dataIndex]);
+            cost.text = myNet.CostCalculation(dataTrain[dataIndex]).ToString();
+            dataIndex++;
+            if (dataIndex == dataTrain.Length-1)
+            {
+                dataIndex = 0;
+            }
         }
         //lines UI
         moveLines(ref inputs, ref allMyHiddenLayers[0].hiddenLayerSizeY,0);
+
         for (int i = 0; i < allMyHiddenLayers.Length; i++)
         {
             if (i + 1 == allMyHiddenLayers.Length)
             {
                 break;
             }
-            moveLines(ref allMyHiddenLayers[i].hiddenLayerSizeY, ref allMyHiddenLayers[i + 1].hiddenLayerSizeY,i);
+            moveLines(ref allMyHiddenLayers[i].hiddenLayerSizeY, ref allMyHiddenLayers[i + 1].hiddenLayerSizeY, i+1);
 
         }
         moveLines(ref allMyHiddenLayers[allMyHiddenLayers.Length - 1].hiddenLayerSizeY, ref outputs, allMyHiddenLayers.Length);
+
+        if (trainNet)
+        {
+            for (int i = 0; i < allMyHiddenLayers.Length; i++)
+            {
+                SetOutputCols(ref allMyHiddenLayers[i].hiddenLayerSizeY, i, dataTrain[dataIndex].inputs);
+            }
+        }
+
+    }
+
+    public void TestNet()
+    {
+
+        myNet.SetDataset(dataTrain[dataTestIndex]);
+        myNet.CalculateNet();
+        //lines UI
+
+        for (int i = 0; i < allMyHiddenLayers.Length; i++)
+        {
+            SetOutputCols(ref allMyHiddenLayers[i].hiddenLayerSizeY, i, dataTest[dataTestIndex].inputs);
+        }
+        dataTestIndex++;
+        if (dataTestIndex==dataTest.Length-1)
+        {
+            dataTestIndex = 0;
+        }
     }
 
     private void CreateBackendNet()
@@ -96,21 +144,45 @@ public class NeuralNetController : MonoBehaviour
         //backend
 
         //dataset
-        double[] outputs = new double[numOutputs];
-        double[] inputs = new double[numInputs];
 
-        inputs[0] = 1;
-        inputs[1] = 0;
-        inputs[2] = 0;
 
-        outputs[0] = 1;
-        outputs[1] = 0;
+        dataTrain = new data[dataTrainSize];
+        dataTest = new data[dataTestSize];
 
+        for (int i = 0; i < dataTrain.Length; i++)
+        {
+            double[] outputs = new double[numOutputs];
+            double[] inputs = new double[numInputs];
+
+            inputs[0] = Random.Range(0f, 1f);
+            inputs[1] = Random.Range(0f, 1f);
+            inputs[2] = Random.Range(0f, 1f);
+
+            outputs[0] = inputs[0];
+            outputs[1] = inputs[1];
+            outputs[2] = inputs[2];
+
+            dataTrain[i] = new data(inputs, outputs);
+        }
+
+        for (int i = 0; i < dataTest.Length; i++)
+        {
+            double[] outputs = new double[numOutputs];
+            double[] inputs = new double[numInputs];
+
+            inputs[0] = Random.Range(0f, 1f);
+            inputs[1] = Random.Range(0f, 1f);
+            inputs[2] = Random.Range(0f, 1f);
+
+            outputs[0] = inputs[0];
+            outputs[1] = inputs[1];
+            outputs[2] = inputs[2];
+            dataTest[i] = new data(inputs, outputs);
+        }
 
         myNet = new NeuralNet(numInputs, numHiddenLayers, numHiddenLayerSize, numOutputs);
         myNet.ConstructNet();
-        myData = new data(inputs, outputs);
-        myNet.SetDataset(myData);
+        myNet.SetDataset(dataTrain[0]);
         myNet.FillWeights();
         myNet.CalculateNet();
 
@@ -124,7 +196,7 @@ public class NeuralNetController : MonoBehaviour
     public void CalculateCost()
     {
         
-        cost.text = myNet.CostCalculation(myData).ToString();
+        cost.text = myNet.CostCalculation(dataTrain[dataIndex]).ToString();
     }
     #endregion
 
@@ -251,39 +323,98 @@ public class NeuralNetController : MonoBehaviour
     private void moveLines(ref GameObject[] startArray, ref GameObject[] endArray,int layerIndex)
     {
         Vector3 dir = Vector3.zero;
-        LineRenderer[] myLinesPerLayer = new LineRenderer[startArray.Length * endArray.Length];
-        int counter = 0;
+        LineRenderer myLinesPerLayer;
+        int weightIndex=0;
+
+
         for (int i = 0; i < startArray.Length; i++)
         {
+
             int j = 0;
             foreach (Transform item in startArray[i].transform)
             {
 
                 dir = (endArray[j].transform.position - startArray[i].transform.position).normalized;
-                myLinesPerLayer[counter] = item.GetComponent<LineRenderer>();
-                float colorR =(float) myNet.layers[layerIndex].weightsIn[counter];
-                Color col = new Color(0, colorR, 0, 1);
-                myLinesPerLayer[counter].startColor = col;
-                myLinesPerLayer[counter].endColor = col;
-                Vector3 myCurrentVector = myLinesPerLayer[counter].GetPosition(1) - myLinesPerLayer[counter].GetPosition(0);
-                Vector3 newPos = myLinesPerLayer[counter].GetPosition(1) + dir * Time.deltaTime * speedAnim;
-
-                if (myLinesPerLayer[counter].GetPosition(1).x > endArray[j].transform.position.x)
+                myLinesPerLayer = item.GetComponent<LineRenderer>();
+              
+                Color col;
+                float [] normalizedWeights = NormilizeWeights(myNet.layers[layerIndex].weightsIn);
+                float colorR =Mathf.Abs(normalizedWeights[weightIndex]);
+                if (trainNet)
                 {
-                    myLinesPerLayer[counter].SetPosition(1, endArray[j].transform.position);
+                   col = new Color(0, colorR, 0, 1);
+                   myLinesPerLayer.startColor = col;
+                   myLinesPerLayer.endColor = Color.blue + col;
+
+                }
+                Vector3 myCurrentVector = myLinesPerLayer.GetPosition(1) - myLinesPerLayer.GetPosition(0);
+                Vector3 newPos = myLinesPerLayer.GetPosition(1) + dir * Time.deltaTime * speedAnim;
+
+                if (myLinesPerLayer.GetPosition(1).x > endArray[j].transform.position.x)
+                {
+                    myLinesPerLayer.SetPosition(1, endArray[j].transform.position);
                     j++;
                     continue;
                 }
-                myLinesPerLayer[counter].SetPosition(1, newPos);
+                myLinesPerLayer.SetPosition(1, newPos);
                 j++;
+                weightIndex++;
+
 
             }
             j = 0;
         }
 
     }
-    #endregion
+    void SetOutputCols(ref GameObject[] startArray,int layerIndex, double[] dataInputs)
+    {
+        float[] inputsWeights;
+        inputsWeights = NormilizeWeights(dataInputs);
+        Color inputColor;
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
+            inputs[i].GetComponent<SpriteRenderer>().color = inputColor;
+        }
 
+        for (int i = 0; i < startArray.Length; i++)
+        {
+            inputsWeights = NormilizeWeights(myNet.layers[layerIndex].weightedInputs);
+            inputColor = new Color(0, inputsWeights[i], inputsWeights[i], 1);
+            startArray[i].GetComponent<SpriteRenderer>().color = inputColor;
+        }
+        
+        inputsWeights = NormilizeWeights(myNet.layers[myNet.layers.Length-1].weightedInputs);
+        for (int i = 0; i < outputs.Length; i++)
+        {
+            inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
+            outputs[i].GetComponent<SpriteRenderer>().color = inputColor;
+        }
+    }
+
+    #endregion
+    float[] NormilizeWeights(double[] weights)
+    {
+        float[] normalizedWeights = new float[weights.Length];
+        float highestWeight = 0;
+        for (int i = 0; i < weights.Length; i++)
+        {
+            if (weights[i] > highestWeight)
+            {
+                highestWeight = (float)weights[i];
+            }
+
+            normalizedWeights[i] = (float)weights[i];
+
+        }
+        for (int i = 0; i < weights.Length; i++)
+        {
+            normalizedWeights[i] = normalizedWeights[i] / highestWeight;
+        }
+
+        return normalizedWeights;
+
+    }
 
 
     public void RecreateNet()

@@ -119,9 +119,6 @@ public class NeuralNet
         }
     }
 
-
-
-
 }
 [System.Serializable]
 public struct data

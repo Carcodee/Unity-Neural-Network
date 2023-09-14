@@ -91,6 +91,17 @@ public class Layer
         double error= output - expectedOutput;
         return System.Math.Pow(error, 2);
     }
+
+
+    public double CostDerivative(double output, double expectedOutput)
+    {
+        return 2 * (output - expectedOutput);
+    }
+    public double ActivationDerivative(double input)
+    {
+        return 1 - System.Math.Pow(System.Math.Tanh(input), 2);
+
+    }
     
 }
 
