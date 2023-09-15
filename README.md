@@ -17,6 +17,8 @@ Features
 
   -Open-Source: Contribute to the project and be a part of a community aiming to make neural network education more accessible.
 
+It contain a simple example were it can identify the color from a RGB value(Somethimes it not match exacly the color on the output because the nature of mixing colors, but the loss optimization is working correctly), feel free to train it with other data!
+
   Previews
 
 https://github.com/Carcodee/Unity-Neural-Network/assets/74780908/3b3a1a9e-1e44-4d3a-8093-c47a7f61f10f
