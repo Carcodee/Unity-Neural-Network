@@ -14,14 +14,15 @@ public class NeuralNet
     [SerializeField]
     public Layer[] layers;
 
+    public double learningRate;
 
-    public NeuralNet(int numInputs, int numHiddenLayers, int numHiddenLayerSize, int numOutputs)
+    public NeuralNet(int numInputs, int numHiddenLayers, int numHiddenLayerSize, int numOutputs, double learningRate)
     {
         this.numInputs = numInputs;
         this.numHiddenLayers = numHiddenLayers;
         this.numHiddenLayerSize = numHiddenLayerSize;
         this.numOutputs = numOutputs;
-
+        this.learningRate = learningRate;
     }
     public void SetDataset(data myDataset)
     {
@@ -51,6 +52,7 @@ public class NeuralNet
     {
         for (int i = 0; i < numHiddenLayers + 1; i++)
         {
+            layers[i].CreateBiases();
             layers[i].CreateRandomWeights();
         }
 
@@ -81,38 +83,43 @@ public class NeuralNet
             layers[i].CalculateLayer(layers[i - 1].weightedInputs);
         }
     }
-    public void Train(data dataSet)
+    public void Train(data[] dataSet)
     {
-        double h= 0.0001f;
-        myDataset = dataSet;
-        double originalCost= CostCalculation(myDataset);
-
-        for (int i = 0; i < layers.Length; i++)
+        for (int i = 0; i < dataSet.Length; i++)
         {
-            for (int j = 0; j < layers[i].weightsIn.Length; j++)
-            {
-
-                layers[i].weightsIn[j] += h;
-                double deltaCost = CostCalculation(myDataset) - originalCost;
-                layers[i].weightsIn[j] -= h;
-                layers[i].weightGradients[j] = deltaCost / h;
-
-            }
-            for (int j = 0; j < layers[i].biases.Length; j++)
-            {
-                layers[i].biases[j] += h;
-                double deltaCost = CostCalculation(myDataset) - originalCost;
-                layers[i].biases[j] -= h;
-                layers[i].biasGradients[j] = deltaCost / h;
-            }
-           
-
+            UpdateAllGradients(dataSet[i]);
         }
-        ApplyAllGradients(0.1f);
+        ApplyAllGradients(learningRate / dataSet.Length);
 
+        ClearAllGradients();
+
+
+    }
+    public void UpdateAllGradients(data dataPoint)
+    {
+        CalculateNet();
+
+        Layer outputLayer = layers[layers.Length-1];
+        double[] nodeValues = outputLayer.CalculateOutputLayerNodeVal(dataPoint.outputs);
+        outputLayer.UpdateGradients(nodeValues);
+        for (int i = layers.Length - 2; i >= 0; i--)
+        {
+            Layer hiddenLayer = layers[layers.Length - 2];
+            nodeValues = hiddenLayer.CalculateHiddenLayerNodeVal(outputLayer, nodeValues);
+            hiddenLayer.UpdateGradients(nodeValues);
+        }
+
+    }
+    public void ClearAllGradients()
+    {
+          for (int i = 0; i < layers.Length; i++)
+            {
+                layers[i].ClearGradients();
+            }
     }
     public void ApplyAllGradients(double learnRate)
     {
+
         for (int i = 0; i < layers.Length; i++)
         {
             layers[i].ApplyGradients(learnRate);

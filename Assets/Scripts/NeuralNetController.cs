@@ -12,9 +12,9 @@ public class NeuralNetController : MonoBehaviour
     [SerializeField]
     private Camera cameraMain;
 
-    public GameObject inputPrefab;
-    public GameObject hiddenLayerPrefab;
-    public GameObject outputPrefab;
+    [HideInInspector] public GameObject inputPrefab;
+    [HideInInspector] public GameObject hiddenLayerPrefab;
+    [HideInInspector] public GameObject outputPrefab;
 
 
     [Header("NET VALUES")]
@@ -40,19 +40,25 @@ public class NeuralNetController : MonoBehaviour
     public bool trainNet = false;
 
     [Header("Debug")]
-    public Transform spawnPointsInputs;
-    public Transform spawnPointsHiddenLayersX;
-    public Transform spawnPointsHiddenLayerSizeY;
-    public Transform spawnPointsOutputs;
-    public TextMeshProUGUI cost;
+    [HideInInspector] public Transform spawnPointsInputs;
+    [HideInInspector] public Transform spawnPointsHiddenLayersX;
+    [HideInInspector] public Transform spawnPointsHiddenLayerSizeY;
+    [HideInInspector]public Transform spawnPointsOutputs;
+    [HideInInspector] public TextMeshProUGUI cost;
 
-    [Header("Neural Net Data")]
     private hiddenLayer[] allMyHiddenLayers;
 
+
+    [Header("Neural Net Data")]
     [Range(1, 500)]
     public int dataTrainSize;
     [Range(1, 100)]
     public int dataTestSize;
+    [Range(1, 5)]
+    public int batches = 1;
+    [Range(0, 2)]
+    public double learnRate = 0;
+    public Batch[] myBatches;
 
     [SerializeField]
     public data[] dataTrain;
@@ -88,14 +94,17 @@ public class NeuralNetController : MonoBehaviour
         }
         if (trainNet)
         {
-
-            myNet.Train(dataTrain[dataIndex]);
-            cost.text = myNet.CostCalculation(dataTrain[dataIndex]).ToString();
-            dataIndex++;
-            if (dataIndex == dataTrain.Length-1)
+            for (int i = 0; i < batches; i++)
             {
-                dataIndex = 0;
+                for (int j = 0; j < myBatches[i].data.Length; j++)
+                {
+                    myNet.Train(myBatches[i].data);
+                    cost.text = myNet.CostCalculation(myBatches[i].data[j]).ToString();
+                }
+
             }
+
+
         }
         //lines UI
         moveLines(ref inputs, ref allMyHiddenLayers[0].hiddenLayerSizeY,0);
@@ -146,48 +155,58 @@ public class NeuralNetController : MonoBehaviour
         //dataset
 
 
-        dataTrain = new data[dataTrainSize];
-        dataTest = new data[dataTestSize];
+        CreateData();
 
-        for (int i = 0; i < dataTrain.Length; i++)
-        {
-            double[] outputs = new double[numOutputs];
-            double[] inputs = new double[numInputs];
-
-            inputs[0] = Random.Range(0f, 1f);
-            inputs[1] = Random.Range(0f, 1f);
-            inputs[2] = Random.Range(0f, 1f);
-
-            outputs[0] = inputs[0];
-            outputs[1] = inputs[1];
-            outputs[2] = inputs[2];
-
-            dataTrain[i] = new data(inputs, outputs);
-        }
-
-        for (int i = 0; i < dataTest.Length; i++)
-        {
-            double[] outputs = new double[numOutputs];
-            double[] inputs = new double[numInputs];
-
-            inputs[0] = Random.Range(0f, 1f);
-            inputs[1] = Random.Range(0f, 1f);
-            inputs[2] = Random.Range(0f, 1f);
-
-            outputs[0] = inputs[0];
-            outputs[1] = inputs[1];
-            outputs[2] = inputs[2];
-            dataTest[i] = new data(inputs, outputs);
-        }
-
-        myNet = new NeuralNet(numInputs, numHiddenLayers, numHiddenLayerSize, numOutputs);
+        myNet = new NeuralNet(numInputs, numHiddenLayers, numHiddenLayerSize, numOutputs, learnRate);
         myNet.ConstructNet();
-        myNet.SetDataset(dataTrain[0]);
+        myNet.SetDataset(myBatches[0].data[0]);
         myNet.FillWeights();
         myNet.CalculateNet();
 
     }
 
+    void CreateData()
+    {
+        myBatches = new Batch[batches];
+        dataTrain = new data[dataTrainSize];
+        dataTest = new data[dataTestSize];
+        for (int i = 0; i < batches; i++)
+        {
+            for (int j = 0; j < dataTrain.Length; j++)
+            {
+                double[] outputs = new double[numOutputs];
+                double[] inputs = new double[numInputs];
+
+                inputs[0] = Random.Range(0f, 1f);
+                inputs[1] = Random.Range(0f, 1f);
+                inputs[2] = Random.Range(0f, 1f);
+
+                outputs[0] = inputs[0];
+                outputs[1] = inputs[1];
+                outputs[2] = inputs[2];
+
+                dataTrain[i] = new data(inputs, outputs);
+            }
+
+
+            myBatches[i] = new Batch(dataTrain);
+        }
+        for (int j = 0; j < dataTest.Length; j++)
+        {
+            double[] outputs = new double[numOutputs];
+            double[] inputs = new double[numInputs];
+
+            inputs[0] = Random.Range(0f, 1f);
+            inputs[1] = Random.Range(0f, 1f);
+            inputs[2] = Random.Range(0f, 1f);
+
+            outputs[0] = inputs[0];
+            outputs[1] = inputs[1];
+            outputs[2] = inputs[2];
+            dataTest[j] = new data(inputs, outputs);
+        }
+
+    }
     #region screen
     public void Train()
     {
@@ -431,9 +450,8 @@ public class NeuralNetController : MonoBehaviour
         {
             Destroy(child.gameObject);
         }
-
-        CreateNetUI(ref numInputs, ref numHiddenLayers, ref numHiddenLayerSize, ref numOutputs);
         CreateBackendNet();
+        CreateNetUI(ref numInputs, ref numHiddenLayers, ref numHiddenLayerSize, ref numOutputs);
     }
 
     public void OnValuesChange()
@@ -462,4 +480,12 @@ public class NeuralNetController : MonoBehaviour
            this.hiddenLayerSizeY = hiddenLayerSizeY; 
         }
     }
+    public struct Batch {
+        public data[] data;
+        public Batch(data[] data)
+        {
+            this.data = data;
+        }
+    }
+
 }
