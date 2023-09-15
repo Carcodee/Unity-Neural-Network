@@ -58,7 +58,7 @@ public class NeuralNetController : MonoBehaviour
     public int batches = 1;
     [Range(0, 2)]
     public double learnRate = 0;
-    public Batch[] myBatches;
+    //public Batch[] myBatches;
 
     [SerializeField]
     public data[] dataTrain;
@@ -94,14 +94,12 @@ public class NeuralNetController : MonoBehaviour
         }
         if (trainNet)
         {
-            for (int i = 0; i < batches; i++)
+            myNet.Train(dataTrain);
+            CalculateCost();
+            dataIndex++;
+            if (dataIndex== dataTrain.Length)
             {
-                for (int j = 0; j < myBatches[i].data.Length; j++)
-                {
-                    myNet.Train(myBatches[i].data);
-                    cost.text = myNet.CostCalculation(myBatches[i].data[j]).ToString();
-                }
-
+                dataIndex = 0;
             }
 
 
@@ -159,7 +157,7 @@ public class NeuralNetController : MonoBehaviour
 
         myNet = new NeuralNet(numInputs, numHiddenLayers, numHiddenLayerSize, numOutputs, learnRate);
         myNet.ConstructNet();
-        myNet.SetDataset(myBatches[0].data[0]);
+        myNet.SetDataset(dataTrain[dataIndex]);
         myNet.FillWeights();
         myNet.CalculateNet();
 
@@ -167,12 +165,13 @@ public class NeuralNetController : MonoBehaviour
 
     void CreateData()
     {
-        myBatches = new Batch[batches];
+        //myBatches = new Batch[batches];
+        //myBatches[i] = new Batch(dataTrain);
+
         dataTrain = new data[dataTrainSize];
         dataTest = new data[dataTestSize];
-        for (int i = 0; i < batches; i++)
-        {
-            for (int j = 0; j < dataTrain.Length; j++)
+
+        for (int j = 0; j < dataTrain.Length; j++)
             {
                 double[] outputs = new double[numOutputs];
                 double[] inputs = new double[numInputs];
@@ -185,12 +184,9 @@ public class NeuralNetController : MonoBehaviour
                 outputs[1] = inputs[1];
                 outputs[2] = inputs[2];
 
-                dataTrain[i] = new data(inputs, outputs);
+                dataTrain[j] = new data(inputs, outputs);
             }
 
-
-            myBatches[i] = new Batch(dataTrain);
-        }
         for (int j = 0; j < dataTest.Length; j++)
         {
             double[] outputs = new double[numOutputs];
@@ -481,7 +477,7 @@ public class NeuralNetController : MonoBehaviour
         }
     }
     public struct Batch {
-        public data[] data;
+        public data [] data;
         public Batch(data[] data)
         {
             this.data = data;

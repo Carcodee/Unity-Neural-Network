@@ -13,90 +13,68 @@ public class Layer
     public double[] biases;
     public double[] weightedInputs;
 
-    public double[] weightGradients;
-    public double[] biasGradients;
 
     public double[] costGradientW;
     public double[] costGradientB;
     
     public double[]inputs;
-
-
+    public double[] notActivatedWeightenedInputs;
     public Layer(int nodesIn, int nodesOut)
     {
         this.nodesIn = nodesIn;
         this.nodesOut = nodesOut;
         weightsIn= new double[nodesIn * nodesOut];
         biases = new double[nodesOut];
-
-
-        weightGradients = new double[nodesIn * nodesOut];
-        biasGradients = new double[nodesOut];
-            
             
         costGradientW = new double[nodesIn * nodesOut];
         costGradientB = new double[nodesOut];
 
+        notActivatedWeightenedInputs= new double[nodesOut];
     }
 
-    public void CreateRandomWeights()
-    {
-        for (int i = 0; i < weightsIn.Length; i++)
-        {
-            weightsIn[i] = Random.Range(-1f, 1f)/ (weightsIn.Length/2);
-        }
-    }
 
-    public void CreateBiases()
-    {
-        for (int i = 0; i < biases.Length; i++)
-        {
-            biases[i] = 0;
-        } 
-    }
-    public void CreateRandomWeightGradients()
-    {
-        for (int i = 0; i < weightGradients.Length; i++)
-        {
-            weightGradients[i] = Random.Range(-1f, 1f);
-        }
-    }
-    public void ClearGradients()
-    {
-        for (int i = 0; i < weightGradients.Length; i++)
-        {
-            weightGradients[i] = 0;
-        }
-        for (int i = 0; i < biasGradients.Length; i++)
-        {
-            biasGradients[i] = 0;
-        }
-    }
 
     public void ApplyGradients(double learnRate)
     {
-        for (int i = 0; i < biases.Length; i++)
-        {
-            biases[i] -= biasGradients[i] * learnRate;
-        }
-
         for (int i = 0; i < weightsIn.Length; i++)
         {
-            weightsIn[i] -= weightGradients[i] * learnRate;
+            weightsIn[i] -= costGradientW[i] * learnRate;
+        }
+        for (int i = 0; i < biases.Length; i++)
+        {
+            biases[i] -= costGradientB[i] * learnRate;
+        }
+
+ 
+    }
+    public void ClearGradients()
+    {
+        for (int i = 0; i < costGradientW.Length; i++)
+        {
+            costGradientW[i] = 0;
+        }
+        for (int i = 0; i < costGradientB.Length; i++)
+        {
+            costGradientB[i] = 0;
         }
     }
     public void UpdateGradients(double[] nodeValues)
     {
         int weightIndex = 0;
-        for (int i = 0; i < this.nodesOut; i++)
+        for (int i = 0; i < nodesOut; i++)
         {
-            for (int j = 0; j < this.nodesIn; j++)
+            for (int j = 0; j < nodesIn; j++)
             {
-                double derivativeCostWeight= inputs[j] * nodeValues[i];
-                weightGradients[weightIndex] += derivativeCostWeight;
+                double derivativeCostWeight = inputs[j] * nodeValues[i];
+                costGradientW[weightIndex] += derivativeCostWeight;
+                weightIndex++;
             }
+
+        }
+        for (int i = 0; i < biases.Length; i++)
+        {
             double derivativeCostBias = 1 * nodeValues[i];
-            biasGradients[i] += derivativeCostBias;
+            costGradientB[i] += derivativeCostBias;
         }
 
     }
@@ -111,9 +89,10 @@ public class Layer
             for (int j = 0; j < oldNodeValues.Length; j++)
             {
                 double weightedInputDer = oldLayer.weightsIn[weightIndex];
-                newNodeValue= weightedInputDer * oldNodeValues[j];
+                newNodeValue += weightedInputDer * oldNodeValues[j];
+                weightIndex++;
             }
-            newNodeValue *= ActivationDerivative(weightedInputs[i]);
+            newNodeValue *= ActivationDerivative(notActivatedWeightenedInputs[i]);
             newNodeValues[i] = newNodeValue;
         }
         return newNodeValues;
@@ -121,11 +100,12 @@ public class Layer
 
     public double [] CalculateOutputLayerNodeVal(double[] expectedOutputs)
     {
+
         double[] nodeValues = new double[expectedOutputs.Length];
         for (int i = 0; i < nodeValues.Length; i++)
         {
             double costDerivative = CostDerivative(weightedInputs[i], expectedOutputs[i]);
-            double activationDerivative = ActivationDerivative(weightedInputs[i]);
+            double activationDerivative = ActivationDerivative(notActivatedWeightenedInputs[i]);
             nodeValues[i] = costDerivative * activationDerivative;
         }
         return nodeValues;
@@ -133,22 +113,28 @@ public class Layer
     }
     public double [] CalculateLayer(double[] inputs)
     {
-        double [] weightendInputs= new double[this.nodesOut];
+        double [] auxWeightendInputs= new double[this.nodesOut];
+        notActivatedWeightenedInputs= new double[this.nodesOut];
+
         this.inputs = inputs;
         int weightIndex = 0;
 
-        for (int i = 0; i < weightendInputs.Length; i++)
+        for (int i = 0; i < auxWeightendInputs.Length; i++)
         {
             for (int j = 0; j < inputs.Length; j++)
             {
-                weightendInputs[i] += inputs[j] * weightsIn[weightIndex] + biases[i];
+                auxWeightendInputs[i] += inputs[j] * weightsIn[weightIndex];
                 weightIndex++;
             }
-            weightendInputs[i] = ActivationFunction(weightendInputs[i]);
+            auxWeightendInputs[i] = auxWeightendInputs[i] + biases[i];
+            notActivatedWeightenedInputs[i] = auxWeightendInputs[i];
+            auxWeightendInputs[i] = ActivationFunction(auxWeightendInputs[i]);
         }
-        this.weightedInputs = weightendInputs;
-        return weightendInputs;
+        this.weightedInputs = auxWeightendInputs;
+        return auxWeightendInputs;
     }
+
+
     double ActivationFunction(double input)
     {
         return System.Math.Tanh(input);
@@ -170,6 +156,28 @@ public class Layer
         return 1 - System.Math.Pow(System.Math.Tanh(input), 2);
 
     }
-    
+
+    public void CreateRandomWeights()
+    {
+        for (int i = 0; i < weightsIn.Length; i++)
+        {
+            weightsIn[i] = Random.Range(-0.1f, 0.1f) / (weightsIn.Length / 2);
+        }
+    }
+
+    public void CreateBiases()
+    {
+        for (int i = 0; i < biases.Length; i++)
+        {
+            biases[i] = Random.Range(-0.01f, 0.01f);
+        }
+    }
+    public void CreateRandomWeightGradients()
+    {
+        for (int i = 0; i < costGradientW.Length; i++)
+        {
+            costGradientW[i] = Random.Range(-1f, 1f);
+        }
+    }
 }
 

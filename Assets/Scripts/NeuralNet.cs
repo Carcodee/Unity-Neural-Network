@@ -70,7 +70,15 @@ public class NeuralNet
         }
         return cost;
     }
-
+    double TotalCost(data[]data)
+    {
+        double totalCost = 0;
+        for (int i = 0; i < data.Length; i++)
+        {
+            totalCost += CostCalculation(data[i]);
+        }
+        return totalCost/data.Length;
+    }
     public void CalculateNet()
     {
         for (int i = 0; i < numHiddenLayers + 1; i++)
@@ -83,58 +91,95 @@ public class NeuralNet
             layers[i].CalculateLayer(layers[i - 1].weightedInputs);
         }
     }
-    public void Train(data[] dataSet)
+    public void Train(data [] dataSet)
     {
         for (int i = 0; i < dataSet.Length; i++)
         {
             UpdateAllGradients(dataSet[i]);
         }
-        ApplyAllGradients(learningRate / dataSet.Length);
+        ApplyAllGradients(learningRate/ dataSet.Length);
 
         ClearAllGradients();
 
+    }
+
+    public void GradientTrain(data [] dataSet)
+    {
+
+        //UpdateAllGradients(dataSet);
+        double h = 0.0001f;
+        double originalCost = TotalCost(dataSet);
+        for (int i = 0; i < layers.Length; i++)
+        {
+            for (int j = 0; j < layers[i].weightsIn.Length; j++)
+            {
+                layers[i].weightsIn[j] += h;
+                double deltaCost = TotalCost(dataSet) - originalCost;
+                layers[i].weightsIn[j] -= h;
+                layers[i].costGradientW[j] = deltaCost / h;
+            }
+
+            for (int j = 0; j < layers[i].biases.Length; j++)
+            {
+                layers[i].biases[j] += h;
+                double deltaCost = TotalCost(dataSet) - originalCost;
+                layers[i].biases[j] -= h;
+                layers[i].costGradientB[j] = deltaCost / h;
+            }
+
+
+
+    }
+
+        ApplyAllGradients(learningRate);
+
+        ClearAllGradients();
 
     }
     public void UpdateAllGradients(data dataPoint)
     {
+        this.myDataset = dataPoint;
         CalculateNet();
 
-        Layer outputLayer = layers[layers.Length-1];
+        Layer outputLayer = layers[layers.Length - 1];
         double[] nodeValues = outputLayer.CalculateOutputLayerNodeVal(dataPoint.outputs);
         outputLayer.UpdateGradients(nodeValues);
         for (int i = layers.Length - 2; i >= 0; i--)
         {
-            Layer hiddenLayer = layers[layers.Length - 2];
-            nodeValues = hiddenLayer.CalculateHiddenLayerNodeVal(outputLayer, nodeValues);
+            Layer hiddenLayer = layers[i];
+            nodeValues = hiddenLayer.CalculateHiddenLayerNodeVal(layers[i + 1], nodeValues);
             hiddenLayer.UpdateGradients(nodeValues);
         }
 
     }
+
     public void ClearAllGradients()
     {
-          for (int i = 0; i < layers.Length; i++)
-            {
-                layers[i].ClearGradients();
-            }
+        for (int i = 0; i < layers.Length; i++)
+        {
+            layers[i].ClearGradients();
+        }
     }
+
     public void ApplyAllGradients(double learnRate)
     {
 
         for (int i = 0; i < layers.Length; i++)
         {
-            layers[i].ApplyGradients(learnRate);
+            {
+                layers[i].ApplyGradients(learnRate);
+            }
         }
     }
-
 }
-[System.Serializable]
-public struct data
-{
-    public double[] inputs;
-    public double[] outputs;
-    public data(double[] inputs, double[] outputs)
+    [System.Serializable]
+    public struct data
     {
-        this.inputs = inputs;
-        this.outputs = outputs;
+        public double[] inputs;
+        public double[] outputs;
+        public data(double[] inputs, double[] outputs)
+        {
+            this.inputs = inputs;
+            this.outputs = outputs;
+        }
     }
-}
