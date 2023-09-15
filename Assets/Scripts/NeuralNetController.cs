@@ -36,14 +36,15 @@ public class NeuralNetController : MonoBehaviour
     private GameObject[] inputs;
     private GameObject[] hiddenLayerSizeY;
     private GameObject[] outputs;
-    public bool dynamicNet = false;
-    public bool trainNet = false;
+    private bool dynamicNet = false;
+    private bool backPropTrain = false;
+    private bool gradientDescentTrain = false;
 
     [Header("Debug")]
     [HideInInspector] public Transform spawnPointsInputs;
     [HideInInspector] public Transform spawnPointsHiddenLayersX;
     [HideInInspector] public Transform spawnPointsHiddenLayerSizeY;
-    [HideInInspector]public Transform spawnPointsOutputs;
+    [HideInInspector] public Transform spawnPointsOutputs;
     [HideInInspector] public TextMeshProUGUI cost;
 
     private hiddenLayer[] allMyHiddenLayers;
@@ -69,9 +70,11 @@ public class NeuralNetController : MonoBehaviour
     private int dataIndex = 0;
     private int dataTestIndex = 0;
 
+    [Header("Animation")]
     [SerializeField]
     float speedAnim;
-    [SerializeField]
+
+    private float onTrainTimerColorLerp;
 
     void Start()
     {
@@ -92,33 +95,39 @@ public class NeuralNetController : MonoBehaviour
         {
             OnValuesChange();
         }
-        if (trainNet)
+        if (backPropTrain)
         {
-            myNet.Train(dataTrain);
+            onTrainTimerColorLerp += Time.deltaTime * 0.1f;
             CalculateCost();
+            myNet.Train(dataTrain);
             dataIndex++;
-            if (dataIndex== dataTrain.Length)
+            if (dataIndex == dataTrain.Length)
+            {
+                dataIndex = 0;
+            }
+        }
+        if (gradientDescentTrain)
+        {
+            onTrainTimerColorLerp += Time.deltaTime * 0.1f;
+            CalculateCost();
+            myNet.GradientTrain(dataTrain);
+            dataIndex++;
+            if (dataIndex == dataTrain.Length)
             {
                 dataIndex = 0;
             }
 
-
         }
         //lines UI
-        moveLines(ref inputs, ref allMyHiddenLayers[0].hiddenLayerSizeY,0);
 
-        for (int i = 0; i < allMyHiddenLayers.Length; i++)
+        if (backPropTrain)
         {
-            if (i + 1 == allMyHiddenLayers.Length)
+            for (int i = 0; i < allMyHiddenLayers.Length; i++)
             {
-                break;
+                SetOutputCols(ref allMyHiddenLayers[i].hiddenLayerSizeY, i, dataTrain[dataIndex].inputs);
             }
-            moveLines(ref allMyHiddenLayers[i].hiddenLayerSizeY, ref allMyHiddenLayers[i + 1].hiddenLayerSizeY, i+1);
-
         }
-        moveLines(ref allMyHiddenLayers[allMyHiddenLayers.Length - 1].hiddenLayerSizeY, ref outputs, allMyHiddenLayers.Length);
-
-        if (trainNet)
+        if (gradientDescentTrain)
         {
             for (int i = 0; i < allMyHiddenLayers.Length; i++)
             {
@@ -127,14 +136,29 @@ public class NeuralNetController : MonoBehaviour
         }
 
     }
+    private void FixedUpdate()
+    {
+        moveLines(ref inputs, ref allMyHiddenLayers[0].hiddenLayerSizeY, 0);
 
+        for (int i = 0; i < allMyHiddenLayers.Length; i++)
+        {
+            if (i + 1 == allMyHiddenLayers.Length)
+            {
+                break;
+            }
+            moveLines(ref allMyHiddenLayers[i].hiddenLayerSizeY, ref allMyHiddenLayers[i + 1].hiddenLayerSizeY, i + 1);
+
+        }
+        moveLines(ref allMyHiddenLayers[allMyHiddenLayers.Length - 1].hiddenLayerSizeY, ref outputs, allMyHiddenLayers.Length);
+
+    }
     public void TestNet()
     {
-
+        gradientDescentTrain = false;
+        backPropTrain = false;
         myNet.SetDataset(dataTrain[dataTestIndex]);
         myNet.CalculateNet();
         //lines UI
-
         for (int i = 0; i < allMyHiddenLayers.Length; i++)
         {
             SetOutputCols(ref allMyHiddenLayers[i].hiddenLayerSizeY, i, dataTest[dataTestIndex].inputs);
@@ -206,12 +230,24 @@ public class NeuralNetController : MonoBehaviour
     #region screen
     public void Train()
     {
-        trainNet = !trainNet;
+        onTrainTimerColorLerp= 0;
+        backPropTrain = !backPropTrain;
+        gradientDescentTrain=false;
+    }
+    public void GradientTrain()
+    {
+        onTrainTimerColorLerp = 0;
+        gradientDescentTrain = !gradientDescentTrain;
+        backPropTrain = false;
+
     }
     public void CalculateCost()
     {
-        
         cost.text = myNet.CostCalculation(dataTrain[dataIndex]).ToString();
+    }
+    public void DynamicNet()
+    {
+        dynamicNet = !dynamicNet;
     }
     #endregion
 
@@ -355,15 +391,16 @@ public class NeuralNetController : MonoBehaviour
                 Color col;
                 float [] normalizedWeights = NormilizeWeights(myNet.layers[layerIndex].weightsIn);
                 float colorR =Mathf.Abs(normalizedWeights[weightIndex]);
-                if (trainNet)
+                if (backPropTrain||gradientDescentTrain)
                 {
                    col = new Color(0, colorR, 0, 1);
-                   myLinesPerLayer.startColor = col;
-                   myLinesPerLayer.endColor = Color.blue + col;
+                   Color lerpedColor = Color.Lerp(myLinesPerLayer.endColor, col, onTrainTimerColorLerp);
+                   myLinesPerLayer.startColor = Color.blue;
+                   myLinesPerLayer.endColor =lerpedColor;
 
                 }
                 Vector3 myCurrentVector = myLinesPerLayer.GetPosition(1) - myLinesPerLayer.GetPosition(0);
-                Vector3 newPos = myLinesPerLayer.GetPosition(1) + dir * Time.deltaTime * speedAnim;
+                Vector3 newPos = myLinesPerLayer.GetPosition(1) + dir * Time.fixedDeltaTime * speedAnim;
 
                 if (myLinesPerLayer.GetPosition(1).x > endArray[j].transform.position.x)
                 {
@@ -381,30 +418,71 @@ public class NeuralNetController : MonoBehaviour
         }
 
     }
-    void SetOutputCols(ref GameObject[] startArray,int layerIndex, double[] dataInputs)
-    {
-        float[] inputsWeights;
-        inputsWeights = NormilizeWeights(dataInputs);
-        Color inputColor;
-        for (int i = 0; i < inputs.Length; i++)
-        {
-            inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
-            inputs[i].GetComponent<SpriteRenderer>().color = inputColor;
-        }
 
-        for (int i = 0; i < startArray.Length; i++)
-        {
-            inputsWeights = NormilizeWeights(myNet.layers[layerIndex].weightedInputs);
-            inputColor = new Color(0, inputsWeights[i], inputsWeights[i], 1);
-            startArray[i].GetComponent<SpriteRenderer>().color = inputColor;
-        }
+
+    /// <summary>
+    /// Test data function
+    /// </summary>
+    /// <param name="startArray"></param>
+    /// <param name="layerIndex"></param>
+    /// <param name="dataInput"></param>
+    void SetOutputCols(ref GameObject[] startArray, int layerIndex, double[] dataInput)
+    {
+    
+            float[] inputsWeights;
+            inputsWeights = NormilizeWeights(dataInput);
+            Color inputColor;
+            for (int i = 0; i < inputs.Length; i++)
+            {
+                if (gradientDescentTrain || backPropTrain)
+                {
+                    inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
+                    Color lerpedColor = Color.Lerp(inputs[i].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
+                    inputs[i].GetComponent<SpriteRenderer>().color = lerpedColor;
+                }
+                else
+                {
+                    inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
+                    inputs[i].GetComponent<SpriteRenderer>().color = inputColor;
+                }
+            }
+
+            for (int i = 0; i < startArray.Length; i++)
+            {
+                if (gradientDescentTrain || backPropTrain)
+                {
+                    inputsWeights = NormilizeWeights(myNet.layers[layerIndex].weightedInputs);
+                    inputColor = new Color(0, inputsWeights[i], inputsWeights[i], 1);
+                    Color lerpedColor = Color.Lerp(startArray[i].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
+                    startArray[i].GetComponent<SpriteRenderer>().color = lerpedColor;
+                }
+                else
+                {
+                    inputsWeights = NormilizeWeights(myNet.layers[layerIndex].weightedInputs);
+                    inputColor = new Color(inputsWeights[i], inputsWeights[i], inputsWeights[i], 1);
+                    startArray[i].GetComponent<SpriteRenderer>().color = inputColor;
+                }   
+
+            }
+
+            inputsWeights = NormilizeWeights(myNet.layers[myNet.layers.Length - 1].weightedInputs);
+            for (int i = 0; i < outputs.Length; i++)
+            {
+                if (gradientDescentTrain || backPropTrain)
+                {
+                    inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
+                    Color lerpedColor = Color.Lerp(outputs[i].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
+                    outputs[i].GetComponent<SpriteRenderer>().color = lerpedColor;
+                }
+                else
+                {
+                    inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
+                    outputs[i].GetComponent<SpriteRenderer>().color = inputColor;
+                }
+                    
+            }
         
-        inputsWeights = NormilizeWeights(myNet.layers[myNet.layers.Length-1].weightedInputs);
-        for (int i = 0; i < outputs.Length; i++)
-        {
-            inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
-            outputs[i].GetComponent<SpriteRenderer>().color = inputColor;
-        }
+
     }
 
     #endregion

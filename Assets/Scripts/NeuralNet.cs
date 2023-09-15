@@ -106,7 +106,6 @@ public class NeuralNet
     public void GradientTrain(data [] dataSet)
     {
 
-        //UpdateAllGradients(dataSet);
         double h = 0.0001f;
         double originalCost = TotalCost(dataSet);
         for (int i = 0; i < layers.Length; i++)
@@ -126,7 +125,6 @@ public class NeuralNet
                 layers[i].biases[j] -= h;
                 layers[i].costGradientB[j] = deltaCost / h;
             }
-
 
 
     }
