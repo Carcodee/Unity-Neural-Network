@@ -1,3 +1,4 @@
+using Mono.Cecil;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -15,6 +16,7 @@ public class NeuralNet
     public Layer[] layers;
 
     public double learningRate;
+    public ActivationType activationType;
 
     public NeuralNet(int numInputs, int numHiddenLayers, int numHiddenLayerSize, int numOutputs, double learningRate)
     {
@@ -27,6 +29,15 @@ public class NeuralNet
     public void SetDataset(data myDataset)
     {
         this.myDataset = myDataset;
+    }
+
+    public void SetNetActivations(ActivationType activationType)
+    {
+        this.activationType = activationType;
+        for (int i = 0; i < layers.Length; i++)
+        {
+            layers[i].SetActivationType(this.activationType);
+        }
     }
 
     public void ConstructNet()
@@ -70,7 +81,7 @@ public class NeuralNet
         }
         return cost;
     }
-    double TotalCost(data[]data)
+    public double TotalCost(data[]data)
     {
         double totalCost = 0;
         for (int i = 0; i < data.Length; i++)
@@ -91,16 +102,19 @@ public class NeuralNet
             layers[i].CalculateLayer(layers[i - 1].weightedInputs);
         }
     }
-    public void Train(data [] dataSet)
+    public void Train(data [] dataSet,ref int index)
     {
+
         for (int i = 0; i < dataSet.Length; i++)
         {
             UpdateAllGradients(dataSet[i]);
+            index++;
+            if (index >= dataSet.Length-1)index = 0;
         }
         ApplyAllGradients(learningRate/ dataSet.Length);
 
         ClearAllGradients();
-
+        Debug.Log("Cost: " );
     }
 
     public void GradientTrain(data [] dataSet)

@@ -8,7 +8,7 @@ public class OnSpawnNeuron : MonoBehaviour
 {
     public float timerSpawn;
     public float animationTime;
-    float scaler=0.61f;
+    float scaler=0.6f;
 
     void Start()
     {
@@ -38,7 +38,7 @@ public class OnSpawnNeuron : MonoBehaviour
     {
         //(Mathf.Pow(-timerSpawn, 2) + (4 * timerSpawn) + 2) * 0.01f
         float timerInAngle = Mathf.Rad2Deg * timerSpawn;
-       scaler = Mathf.Lerp(0.334f, 1f, Mathf.Sin(Mathf.Pow(-timerInAngle*0.01f, 2)+(3* timerInAngle*0.01f) +0.8f));
+       scaler = Mathf.Lerp(0.334f, .8f, Mathf.Sin(Mathf.Pow(-timerInAngle*0.01f, 2)+(3* timerInAngle*0.01f) +0.8f));
        
     }
     

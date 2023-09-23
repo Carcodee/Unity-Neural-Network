@@ -19,6 +19,8 @@ public class Layer
     
     public double[]inputs;
     public double[] notActivatedWeightenedInputs;
+    ActivationType activationType;
+
     public Layer(int nodesIn, int nodesOut)
     {
         this.nodesIn = nodesIn;
@@ -32,7 +34,10 @@ public class Layer
         notActivatedWeightenedInputs= new double[nodesOut];
     }
 
-
+    public void SetActivationType(ActivationType activationType)
+    {
+        this.activationType = activationType;
+    }
 
     public void ApplyGradients(double learnRate)
     {
@@ -92,7 +97,7 @@ public class Layer
                 newNodeValue += weightedInputDer * oldNodeValues[j];
                 weightIndex++;
             }
-            newNodeValue *= ActivationDerivative(notActivatedWeightenedInputs[i]);
+            newNodeValue *= Activations.Activation((notActivatedWeightenedInputs[i]), this.activationType);
             newNodeValues[i] = newNodeValue;
         }
         return newNodeValues;
@@ -105,7 +110,7 @@ public class Layer
         for (int i = 0; i < nodeValues.Length; i++)
         {
             double costDerivative = CostDerivative(weightedInputs[i], expectedOutputs[i]);
-            double activationDerivative = ActivationDerivative(notActivatedWeightenedInputs[i]);
+            double activationDerivative = Activations.ActivationDerivative((notActivatedWeightenedInputs[i]), this.activationType);
             nodeValues[i] = costDerivative * activationDerivative;
         }
         return nodeValues;
@@ -128,17 +133,12 @@ public class Layer
             }
             auxWeightendInputs[i] = auxWeightendInputs[i] + biases[i];
             notActivatedWeightenedInputs[i] = auxWeightendInputs[i];
-            auxWeightendInputs[i] = ActivationFunction(auxWeightendInputs[i]);
+            auxWeightendInputs[i] = Activations.Activation((auxWeightendInputs[i]),this.activationType);
         }
         this.weightedInputs = auxWeightendInputs;
         return auxWeightendInputs;
     }
 
-
-    double ActivationFunction(double input)
-    {
-        return System.Math.Tanh(input);
-    }
 
     public double ReturnCost(double output, double expectedOutput)
     {
@@ -146,22 +146,16 @@ public class Layer
         return System.Math.Pow(error, 2);
     }
 
-
     public double CostDerivative(double output, double expectedOutput)
     {
         return 2 * (output - expectedOutput);
-    }
-    public double ActivationDerivative(double input)
-    {
-        return 1 - System.Math.Pow(System.Math.Tanh(input), 2);
-
     }
 
     public void CreateRandomWeights()
     {
         for (int i = 0; i < weightsIn.Length; i++)
         {
-            weightsIn[i] = Random.Range(-0.1f, 0.1f) / (weightsIn.Length / 2);
+            weightsIn[i] = Random.Range(-0.1f, 0.1f) ;
         }
     }
 

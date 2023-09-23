@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -46,7 +47,8 @@ public class NeuralNetController : MonoBehaviour
     [HideInInspector] public Transform spawnPointsHiddenLayerSizeY;
     [HideInInspector] public Transform spawnPointsOutputs;
     [HideInInspector] public TextMeshProUGUI cost;
-
+    public TextMeshProUGUI inputCol;
+    public TextMeshProUGUI outputCol;
     private hiddenLayer[] allMyHiddenLayers;
 
 
@@ -57,7 +59,7 @@ public class NeuralNetController : MonoBehaviour
     public int dataTestSize;
     [Range(1, 5)]
     public int batches = 1;
-    [Range(0, 2)]
+    [Range(0, 10)]
     public double learnRate = 0;
     //public Batch[] myBatches;
 
@@ -99,12 +101,8 @@ public class NeuralNetController : MonoBehaviour
         {
             onTrainTimerColorLerp += Time.deltaTime * 0.1f;
             CalculateCost();
-            myNet.Train(dataTrain);
-            dataIndex++;
-            if (dataIndex == dataTrain.Length)
-            {
-                dataIndex = 0;
-            }
+            myNet.Train(dataTrain,ref dataIndex);
+
         }
         if (gradientDescentTrain)
         {
@@ -156,7 +154,7 @@ public class NeuralNetController : MonoBehaviour
     {
         gradientDescentTrain = false;
         backPropTrain = false;
-        myNet.SetDataset(dataTrain[dataTestIndex]);
+        myNet.SetDataset(dataTest[dataTestIndex]);
         myNet.CalculateNet();
         //lines UI
         for (int i = 0; i < allMyHiddenLayers.Length; i++)
@@ -181,6 +179,7 @@ public class NeuralNetController : MonoBehaviour
 
         myNet = new NeuralNet(numInputs, numHiddenLayers, numHiddenLayerSize, numOutputs, learnRate);
         myNet.ConstructNet();
+        myNet.SetNetActivations(ActivationType.Tanh);
         myNet.SetDataset(dataTrain[dataIndex]);
         myNet.FillWeights();
         myNet.CalculateNet();
@@ -200,9 +199,9 @@ public class NeuralNetController : MonoBehaviour
                 double[] outputs = new double[numOutputs];
                 double[] inputs = new double[numInputs];
 
-                inputs[0] = Random.Range(0f, 1f);
-                inputs[1] = Random.Range(0f, 1f);
-                inputs[2] = Random.Range(0f, 1f);
+                inputs[0] =UnityEngine.Random.Range(0f, 1f);
+                inputs[1] = UnityEngine.Random.Range(0f, 1f);
+                inputs[2] = UnityEngine.Random.Range(0f, 1f);
 
                 outputs[0] = inputs[0];
                 outputs[1] = inputs[1];
@@ -216,9 +215,9 @@ public class NeuralNetController : MonoBehaviour
             double[] outputs = new double[numOutputs];
             double[] inputs = new double[numInputs];
 
-            inputs[0] = Random.Range(0f, 1f);
-            inputs[1] = Random.Range(0f, 1f);
-            inputs[2] = Random.Range(0f, 1f);
+            inputs[0] = UnityEngine.Random.Range(0f, 1f);
+            inputs[1] = UnityEngine.Random.Range(0f, 1f);
+            inputs[2] = UnityEngine.Random.Range(0f, 1f);
 
             outputs[0] = inputs[0];
             outputs[1] = inputs[1];
@@ -243,7 +242,7 @@ public class NeuralNetController : MonoBehaviour
     }
     public void CalculateCost()
     {
-        cost.text = myNet.CostCalculation(dataTrain[dataIndex]).ToString();
+        cost.text = myNet.TotalCost(dataTrain).ToString();
     }
     public void DynamicNet()
     {
@@ -393,10 +392,21 @@ public class NeuralNetController : MonoBehaviour
                 float colorR =Mathf.Abs(normalizedWeights[weightIndex]);
                 if (backPropTrain||gradientDescentTrain)
                 {
-                   col = new Color(0, colorR, 0, 1);
-                   Color lerpedColor = Color.Lerp(myLinesPerLayer.endColor, col, onTrainTimerColorLerp);
-                   myLinesPerLayer.startColor = Color.blue;
-                   myLinesPerLayer.endColor =lerpedColor;
+                    if (normalizedWeights[i]>0)
+                    {
+                        col = new Color(0, colorR, 0, 1);
+                        Color lerpedColor = Color.Lerp(myLinesPerLayer.endColor, col, onTrainTimerColorLerp);
+                        myLinesPerLayer.startColor = Color.blue;
+                        myLinesPerLayer.endColor = lerpedColor;
+                    }
+                    else
+                    {
+                        col = new Color(colorR, 0, 0, 1);
+                        Color lerpedColor = Color.Lerp(myLinesPerLayer.endColor, col, onTrainTimerColorLerp);
+                        myLinesPerLayer.startColor = Color.blue;
+                        myLinesPerLayer.endColor = lerpedColor;
+                    }
+
 
                 }
                 Vector3 myCurrentVector = myLinesPerLayer.GetPosition(1) - myLinesPerLayer.GetPosition(0);
@@ -431,7 +441,10 @@ public class NeuralNetController : MonoBehaviour
     
             float[] inputsWeights;
             inputsWeights = NormilizeWeights(dataInput);
-            Color inputColor;
+            inputsWeights[0] = (float)Math.Round(inputsWeights[0], 5);
+            inputsWeights[1] = (float)Math.Round(inputsWeights[1], 5);
+            inputsWeights[2] = (float)Math.Round(inputsWeights[2], 5);
+             Color inputColor;
             for (int i = 0; i < inputs.Length; i++)
             {
                 if (gradientDescentTrain || backPropTrain)
@@ -439,12 +452,17 @@ public class NeuralNetController : MonoBehaviour
                     inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
                     Color lerpedColor = Color.Lerp(inputs[i].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
                     inputs[i].GetComponent<SpriteRenderer>().color = lerpedColor;
-                }
+                Color outputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
+                SetTextColor(outputColor, ref inputCol);
+            }
                 else
                 {
                     inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
                     inputs[i].GetComponent<SpriteRenderer>().color = inputColor;
-                }
+                Color outputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
+                SetTextColor(outputColor, ref inputCol);
+            }
+
             }
 
             for (int i = 0; i < startArray.Length; i++)
@@ -466,25 +484,52 @@ public class NeuralNetController : MonoBehaviour
             }
 
             inputsWeights = NormilizeWeights(myNet.layers[myNet.layers.Length - 1].weightedInputs);
-            for (int i = 0; i < outputs.Length; i++)
-            {
-                if (gradientDescentTrain || backPropTrain)
-                {
-                    inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
-                    Color lerpedColor = Color.Lerp(outputs[i].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
-                    outputs[i].GetComponent<SpriteRenderer>().color = lerpedColor;
-                }
-                else
-                {
-                    inputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
-                    outputs[i].GetComponent<SpriteRenderer>().color = inputColor;
-                }
-                    
-            }
+            inputsWeights[0] = (float)Math.Round(inputsWeights[0], 5);
+            inputsWeights[1] = (float)Math.Round(inputsWeights[1], 5);
+            inputsWeights[2] = (float)Math.Round(inputsWeights[2], 5);
+        if (gradientDescentTrain || backPropTrain)
+        {
+            inputColor = new Color(inputsWeights[0], 0, 0, 1);
+            Color lerpedColor = Color.Lerp(outputs[0].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
+            outputs[0].GetComponent<SpriteRenderer>().color = lerpedColor;
+            inputColor = new Color(0, inputsWeights[1], 0, 1);
+            lerpedColor = Color.Lerp(outputs[1].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
+            outputs[1].GetComponent<SpriteRenderer>().color = lerpedColor;
+            inputColor = new Color(0, 0, inputsWeights[2], 1);
+            lerpedColor = Color.Lerp(outputs[2].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
+            outputs[2].GetComponent<SpriteRenderer>().color = lerpedColor;
+            Color outputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
+            SetTextColor(outputColor, ref outputCol);
+
+
+        }
+        else
+        {
+
+            inputColor = new Color(inputsWeights[0], 0.0f, 0.0f, 1);
+            outputs[0].GetComponent<SpriteRenderer>().color = inputColor;
+
+            inputColor = new Color(0.0f,inputsWeights[1], 0.0f, 1);
+            outputs[1].GetComponent<SpriteRenderer>().color = inputColor;
+
+            inputColor = new Color(0.0f, 0.0f, inputsWeights[2], 1);
+            outputs[2].GetComponent<SpriteRenderer>().color = inputColor;
+
+            Color outputColor=new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2],1);
+            SetTextColor(outputColor, ref outputCol);
+
+        }
+          
+            
         
 
     }
 
+    void SetTextColor(Color color,ref TextMeshProUGUI text)
+    {
+        text.color = color;
+
+    }
     #endregion
     float[] NormilizeWeights(double[] weights)
     {
@@ -543,6 +588,10 @@ public class NeuralNetController : MonoBehaviour
 
     }
 
+    public void SetActivationFunction(System.Int32 activationIndex)
+    {
+        myNet.SetNetActivations((ActivationType)activationIndex);
+    }
 
 
     [System.Serializable]
