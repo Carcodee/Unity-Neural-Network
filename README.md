@@ -17,7 +17,7 @@ Features
 
   -Open-Source: Contribute to the project and be a part of a community aiming to make neural network education more accessible.
 
-It contain a simple example were it can identify the color from a RGB value(Somethimes it not match exacly the color on the output because the nature of mixing colors, but the loss optimization is working correctly), feel free to train it with other data!
+It contain a simple example were it can identify the color from a RGB, value feel free to train it with your data!
 
   Previews
 
