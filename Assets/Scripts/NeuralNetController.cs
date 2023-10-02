@@ -441,9 +441,9 @@ public class NeuralNetController : MonoBehaviour
     
             float[] inputsWeights;
             inputsWeights = NormilizeWeights(dataInput);
-            inputsWeights[0] = (float)Math.Round(inputsWeights[0], 5);
-            inputsWeights[1] = (float)Math.Round(inputsWeights[1], 5);
-            inputsWeights[2] = (float)Math.Round(inputsWeights[2], 5);
+            inputsWeights[0] = (float)Math.Round(inputsWeights[0], 6);
+            inputsWeights[1] = (float)Math.Round(inputsWeights[1], 6);
+            inputsWeights[2] = (float)Math.Round(inputsWeights[2], 6);
              Color inputColor;
             for (int i = 0; i < inputs.Length; i++)
             {
@@ -489,13 +489,13 @@ public class NeuralNetController : MonoBehaviour
             inputsWeights[2] = (float)Math.Round(inputsWeights[2], 5);
         if (gradientDescentTrain || backPropTrain)
         {
-            inputColor = new Color(inputsWeights[0], 0, 0, 1);
+            inputColor = new Color(inputsWeights[0], 0, 0, 6);
             Color lerpedColor = Color.Lerp(outputs[0].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
             outputs[0].GetComponent<SpriteRenderer>().color = lerpedColor;
-            inputColor = new Color(0, inputsWeights[1], 0, 1);
+            inputColor = new Color(0, inputsWeights[1], 0, 6);
             lerpedColor = Color.Lerp(outputs[1].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
             outputs[1].GetComponent<SpriteRenderer>().color = lerpedColor;
-            inputColor = new Color(0, 0, inputsWeights[2], 1);
+            inputColor = new Color(0, 0, inputsWeights[2], 6);
             lerpedColor = Color.Lerp(outputs[2].GetComponent<SpriteRenderer>().color, inputColor, onTrainTimerColorLerp);
             outputs[2].GetComponent<SpriteRenderer>().color = lerpedColor;
             Color outputColor = new Color(inputsWeights[0], inputsWeights[1], inputsWeights[2], 1);
