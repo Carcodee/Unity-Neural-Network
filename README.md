@@ -5,17 +5,17 @@ Unity-Neural-Network
 
 Welcome to the Unity Neural Network repository! This tool is crafted with the aim to facilitate the visualization of neural networks in an interactive and intuitive manner. Leveraging the powerful Unity 3D engine, it serves as a bridge between the complex world of neural networks and individuals keen on understanding or presenting them in a visually engaging way.
 
-Features
+Usage
 
-  -Dynamic Visualization: Visualize the intricate structures of neural networks with dynamic 3D representations.
+  - Dynamic Visualization: Visualize the intricate structures of neural networks with dynamic 3D representations.
 
-  -Interactivity: Interact with the neural network, manipulate nodes, and observe the changes in real-time.
+  - Interactivity: Interact with the neural network, manipulate nodes, and observe the changes in real-time.
 
-  -Modular Design: Easy to extend and integrate with other Unity projects or neural network frameworks.
+  - Modular Design: Easy to extend and integrate with other Unity projects or neural network frameworks.
 
-  -Educational Tool: A great resource for educators to elucidate the concepts of neural networks in classrooms or online tutorials.
+  - Educational Tool: A great resource for educators to elucidate the concepts of neural networks in classrooms or online tutorials.
 
-  -Open-Source: Contribute to the project and be a part of a community aiming to make neural network education more accessible.
+  - Open-Source: Contribute to the project and be a part of a community aiming to make neural network education more accessible.
 
 It contain a simple example were it can identify the color from a RGB, value feel free to train it with your data!
 
